@@ -1,0 +1,1742 @@
+version: 2.1
+
+jobs:
+  stage_ivan-ci:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Produce fixture D
+          command: |
+            mkdir -p /tmp/build/gamma
+            set +o pipefail 2>/dev/null; diff <(seq 1 851045) <(seq 2 851045) > /tmp/build/gamma/STEP.out 2>&1; true
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/STEP.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - STEP.out
+  ivan-ci:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/STEP.out 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  do_publish:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: pennant
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 1 100 | awk 'NR>50' | wc -l; true ; } > /tmp/build/gamma/r2.state
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/r2.state) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - r2.state
+  publish:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/xd.pkg 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  tmp_VerifyService:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: second try
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{PI=3.14159265; print PI, PI*2, PI*PI}'; true ; } > /tmp/build/gamma/handoff.ok
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/handoff.ok) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - handoff.ok
+  VerifyService:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/handoff.ok 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  reload_v3-nightly:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: bridge stretch
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(a=0;a<256;a++)xored = xored  (a ^ 0x5a); print length(xored)}'; true ; } > /tmp/build/gamma/audit.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/audit.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - audit.txt
+  v3-nightly:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/audit.txt 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  stepB_quebec:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: flag down
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{s="aaabbbccc"; gsub(/[ac]/,"-",s); print s}'; true ; } > /tmp/build/gamma/import.bin
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/import.bin) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - import.bin
+  quebec:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/import.bin 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  Alpha_QA_VERIFY_7:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: belt sand
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; tr -s a-z < /etc/hostname | head -1; true ; } > /tmp/build/gamma/relay.ok
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/relay.ok) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - relay.ok
+  QA_VERIFY_7:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/xd.pkg 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  loader_pat-ci:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: again
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; ( echo "hdr"; seq 1 60740; echo "ftr" ) | wc -l; true ; } > /tmp/build/gamma/snapshot.state
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/snapshot.state) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - snapshot.state
+  pat-ci:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/J.data 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  db_check-full-regression-suite:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: verse jump
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 1 10 | awk '{s=s $1}END{print length(s)}'; true ; } > /tmp/build/gamma/opts.json
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/opts.json) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - opts.json
+  check-full-regression-suite:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/opts.json 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  resync_intergration:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: pine resin
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 100 1 2>/dev/null || seq 1 100 | tac | head -3; true ; } > /tmp/build/gamma/arr.yml
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/arr.yml) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - arr.yml
+  intergration:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/arr.yml 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  rerun_py310-bench:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: hip hinge
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; touch /tmp/_c && chmod 644 /tmp/_c && stat -c %a /tmp/_c && rm /tmp/_c; true ; } > /tmp/build/gamma/stage-complete.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/stage-complete.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - stage-complete.txt
+  py310-bench:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/J.data 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  sys_smoke:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: downpour
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; ps -eo state 2>/dev/null | sort | uniq -c; true ; } > /tmp/build/gamma/J.data
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/J.data) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - J.data
+  smoke:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/J.data 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  orchestrate_atlas-rc:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: tack sail
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; cksum /etc/hostname | awk '{print $1}'; true ; } > /tmp/build/gamma/file4.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/file4.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - file4.out
+  atlas-rc:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/file4.out 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  postcheck_verify-staging-artifact-bundle:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Produce fixture D
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=25;i++){f = (i==1||i==2 ? 1 : f1+f2); f2 = f1; f1 = f}; print f}' 2>/dev/null || awk 'BEGIN{a=1;b=1;for(i=3;i<=25;i++){c=a+b;a=b;b=c}; print b}'; true ; } > /tmp/build/gamma/cache05.dat
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/cache05.dat) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - cache05.dat
+  verify-staging-artifact-bundle:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/cache05.dat 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  bundle_q2-canary:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: pressurized
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{printf "0b"; for(i=7;i>=0;i--)printf (42/2^i)%2>=1 ? "1" : "0"; print ""}'; true ; } > /tmp/build/gamma/o.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/o.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - o.out
+  q2-canary:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/o.out 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  ctx_update-db-bug:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: clamshell
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=50; print n*(n+1)/2, n*(n+1)*(2*n+1)/6}'; true ; } > /tmp/build/gamma/gamma-run.log
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/gamma-run.log) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - gamma-run.log
+  update-db-bug:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/gamma-run.log 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  builder_wip-queue:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: powder coat
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; type echo; true ; } > /tmp/build/gamma/temp2.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/temp2.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - temp2.txt
+  wip-queue:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/temp2.txt 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  package_vega:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: scrub out
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; tr -s a-z < /etc/hostname | head -1; true ; } > /tmp/build/gamma/cache-mid.bin
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/cache-mid.bin) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - cache-mid.bin
+  vega:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/cache-mid.bin 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  builder_feb17-ship:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: spiderweb catch
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=10; p=1; for(i=1;i<=n;i++)p*=2; print p}'; true ; } > /tmp/build/gamma/spans.log
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/spans.log) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - spans.log
+  feb17-ship:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/J.data 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  postbuild_VerifyStaging:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: neutron drum
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; pwd | md5sum; true ; } > /tmp/build/gamma/K.data
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/K.data) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - K.data
+  VerifyStaging:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/J.data 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  phase_CORE-929:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: grep
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo "key: value" | sed 's/^.*: //'; true ; } > /tmp/build/gamma/baton.bin
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/baton.bin) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - baton.bin
+  CORE-929:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/J.data 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  linter_java17-lint:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: glacier creep
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; head -c 3145728 /dev/urandom | md5sum; true ; } > /tmp/build/gamma/100.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/100.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - 100.txt
+  java17-lint:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/100.txt 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  ensure_CORE-191:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: oops
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; head -c 50 /dev/zero | base64; true ; } > /tmp/build/gamma/rpt-03.json
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/rpt-03.json) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - rpt-03.json
+  CORE-191:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/rpt-03.json 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  sys_yolo:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: broad reach
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=10;i++){s+=1/i} printf "%.4f\n",s}'; true ; } > /tmp/build/gamma/file3.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/file3.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - file3.txt
+  yolo:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/file3.txt 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  linter_all-greens:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: lower colors
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo $(ls /usr/bin | wc -l); true ; } > /tmp/build/gamma/phase-8.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/phase-8.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - phase-8.out
+  all-greens:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/phase-8.out 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  ensure_spin-up:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Produce fixture D
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 1 20 | awk '{if($1%2==0 && $1%3==0)print}' | wc -l; true ; } > /tmp/build/gamma/output-D.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/output-D.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - output-D.out
+  spin-up:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/output-D.out 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  inspect_canary:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: donut
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; dd if=/dev/zero bs=1M count=20 2>/dev/null | sha256sum; true ; } > /tmp/build/gamma/bottom.log
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/bottom.log) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - bottom.log
+  canary:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/J.data 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  stage_v2-rc2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: lump charcoal
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 2 27975 | awk '{for(i=2;i*i<=$1;i++)if($1%i==0){next}print}' | wc -l; true ; } > /tmp/build/gamma/.lock
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/.lock) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - .lock
+  v2-rc2:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/.lock 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  resync_rm-cache-reload:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: hook again
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo "abcdef" | fold -w2; true ; } > /tmp/build/gamma/xd.pkg
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/xd.pkg) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - xd.pkg
+  rm-cache-reload:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/xd.pkg 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  green_node18-fmt:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: rough draft
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo "a b c d e" | awk '{for(i=1;i<=NF;i++) if(i%2) print $i}'; true ; } > /tmp/build/gamma/intermediate.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/intermediate.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - intermediate.txt
+  node18-fmt:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/xd.pkg 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+  syncer_ruby3-release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: cov
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo "payload=42" | awk -F= '$1=="payload"{print $2+1}'; true ; } > /tmp/build/gamma/q1
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/q1) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - q1
+  ruby3-release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: Mmap handoff
+          command: |
+            grep -c '[a-z]' /tmp/build/gamma/q1 2>/dev/null || true
+      - run:
+          name: Get fresh code
+          command: git clone -q --single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prepare source archive
+          command: tar -I xz -xf deps.tar.xz
+      - run:
+          name: Post-build check
+          command: env | wc -l
+      - run:
+          no_output_timeout: 79m
+          command: exec ./test
+
+  Delta_ivan-ci_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Produce fixture D
+          command: |
+            mkdir -p /tmp/build/gamma
+            set +o pipefail 2>/dev/null; diff <(seq 1 851045) <(seq 2 851045) > /tmp/build/gamma/STEP.out 2>&1; true
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/STEP.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - STEP.out
+  go_VerifyService_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: flake city
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{s=0; for(i=1;i<=4;i++)for(j=1;j<=4;j++)for(k=1;k<=4;k++)s++; print s}'; true ; } > /tmp/build/gamma/handoff.ok
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/handoff.ok) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - handoff.ok
+  beta_ruby3-release_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: wet sand
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 1 100 | awk '{a[$1%7]++}END{for(k in a)print k,a[k]}' | sort -n; true ; } > /tmp/build/gamma/q1
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/q1) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - q1
+  bake_intergration_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: hmm again
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 1 13875 | awk '{s+=$1}END{print s}'; true ; } > /tmp/build/gamma/arr.yml
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/arr.yml) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - arr.yml
+  reset_v3-nightly_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: magnetar flare
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; head -c 50 /dev/urandom | wc -c; true ; } > /tmp/build/gamma/audit.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/audit.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - audit.txt
+  round1_spin-up_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Produce fixture D
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo 'banana apple apricot' | grep -o 'a' | wc -l; true ; } > /tmp/build/gamma/output-D.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/output-D.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - output-D.out
+  hydrate_java17-lint_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: twister dodge
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; yes 0 | head -500 | tr -d '\n' | md5sum; true ; } > /tmp/build/gamma/100.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/100.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - 100.txt
+  dispatch_check-full-regression-suite_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: jump squat
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; id -g; true ; } > /tmp/build/gamma/opts.json
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/opts.json) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - opts.json
+  cacher_all-greens_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: ping intern
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; seq 1 20 | tr '\n' ' ' | md5sum; true ; } > /tmp/build/gamma/phase-8.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/phase-8.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - phase-8.out
+  package_atlas-rc_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: rocket stove
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=20; for(a=0;a<n;a++) for(b=0;b<n;b++) if((a+b)%7==0) c++; print c}'; true ; } > /tmp/build/gamma/file4.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/file4.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - file4.out
+  gamma_update-db-bug_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: whiff
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{print 1234567 / 89}'; true ; } > /tmp/build/gamma/gamma-run.log
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/gamma-run.log) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - gamma-run.log
+  cache_v2-rc2_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: pleasantly full
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo "the rain in spain" | tr -s ' ' | wc -c; true ; } > /tmp/build/gamma/.lock
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/.lock) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - .lock
+  g2_CORE-191_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: WHY
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; yes 0 | head -500 | tr -d '\n' | md5sum; true ; } > /tmp/build/gamma/rpt-03.json
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/rpt-03.json) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - rpt-03.json
+  green_vega_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: pls pass
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; date +%Z; true ; } > /tmp/build/gamma/cache-mid.bin
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/cache-mid.bin) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - cache-mid.bin
+  audit_wip-queue_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: raise voice
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; echo $(( RANDOM + RANDOM )) | md5sum; true ; } > /tmp/build/gamma/temp2.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/temp2.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - temp2.txt
+  round1_q2-canary_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: boss fight
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=5;i++){print i; print i*i}}' | wc -l; true ; } > /tmp/build/gamma/o.out
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/o.out) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - o.out
+  fixture_quebec_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: bilge pump
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; printf '%s\n' "{foo: 1, bar: 2}" | md5sum; true ; } > /tmp/build/gamma/import.bin
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/import.bin) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - import.bin
+  prebuild_verify-staging-artifact-bundle_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Produce fixture D
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<64;i++)printf "%x",i%16; print ""}'; true ; } > /tmp/build/gamma/cache05.dat
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/cache05.dat) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - cache05.dat
+  checker_yolo_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/build/gamma
+      - run:
+          name: lacrosse ball
+          command: |
+            mkdir -p /tmp/build/gamma
+            { set +o pipefail 2>/dev/null; grep -v nologin /etc/passwd | wc -l; true ; } > /tmp/build/gamma/file3.txt
+            echo "mod97: $(( $(wc -c </tmp/build/gamma/file3.txt) % 97 ))"
+      - persist_to_workspace:
+          root: /tmp/build/gamma
+          paths:
+            - file3.txt
+workflows:
+  ci:
+    jobs:
+      - sys_smoke
+      - rerun_py310-bench
+      - loader_pat-ci
+      - smoke:
+          requires:
+            - sys_smoke
+            - rerun_py310-bench
+            - loader_pat-ci
+      - py310-bench:
+          requires:
+            - sys_smoke
+            - rerun_py310-bench
+            - loader_pat-ci
+      - pat-ci:
+          requires:
+            - sys_smoke
+            - rerun_py310-bench
+            - loader_pat-ci
+      - VerifyStaging:
+          requires:
+            - sys_smoke
+            - rerun_py310-bench
+            - loader_pat-ci
+      - feb17-ship:
+          requires:
+            - sys_smoke
+            - rerun_py310-bench
+            - loader_pat-ci
+      - CORE-929:
+          requires:
+            - sys_smoke
+            - rerun_py310-bench
+            - loader_pat-ci
+      - canary:
+          requires:
+            - sys_smoke
+            - rerun_py310-bench
+            - loader_pat-ci
+      - resync_rm-cache-reload
+      - green_node18-fmt
+      - do_publish
+      - rm-cache-reload:
+          requires:
+            - resync_rm-cache-reload
+            - green_node18-fmt
+            - do_publish
+      - node18-fmt:
+          requires:
+            - resync_rm-cache-reload
+            - green_node18-fmt
+            - do_publish
+      - publish:
+          requires:
+            - resync_rm-cache-reload
+            - green_node18-fmt
+            - do_publish
+      - QA_VERIFY_7:
+          requires:
+            - resync_rm-cache-reload
+            - green_node18-fmt
+            - do_publish
+      - stage_ivan-ci
+      - Delta_ivan-ci_2:
+          requires:
+            - stage_ivan-ci
+      - ivan-ci:
+          requires:
+            - Delta_ivan-ci_2
+      - tmp_VerifyService:
+          requires:
+            - Delta_ivan-ci_2
+      - go_VerifyService_2:
+          requires:
+            - tmp_VerifyService
+      - VerifyService:
+          requires:
+            - go_VerifyService_2
+      - syncer_ruby3-release:
+          requires:
+            - go_VerifyService_2
+      - beta_ruby3-release_2:
+          requires:
+            - syncer_ruby3-release
+      - ruby3-release:
+          requires:
+            - beta_ruby3-release_2
+      - resync_intergration:
+          requires:
+            - beta_ruby3-release_2
+      - bake_intergration_2:
+          requires:
+            - resync_intergration
+      - intergration:
+          requires:
+            - bake_intergration_2
+      - reload_v3-nightly:
+          requires:
+            - bake_intergration_2
+      - reset_v3-nightly_2:
+          requires:
+            - reload_v3-nightly
+      - v3-nightly:
+          requires:
+            - reset_v3-nightly_2
+      - ensure_spin-up:
+          requires:
+            - reset_v3-nightly_2
+      - round1_spin-up_2:
+          requires:
+            - ensure_spin-up
+      - spin-up:
+          requires:
+            - round1_spin-up_2
+      - linter_java17-lint:
+          requires:
+            - round1_spin-up_2
+      - hydrate_java17-lint_2:
+          requires:
+            - linter_java17-lint
+      - java17-lint:
+          requires:
+            - hydrate_java17-lint_2
+      - db_check-full-regression-suite
+      - dispatch_check-full-regression-suite_2:
+          requires:
+            - db_check-full-regression-suite
+      - check-full-regression-suite:
+          requires:
+            - dispatch_check-full-regression-suite_2
+      - linter_all-greens:
+          requires:
+            - dispatch_check-full-regression-suite_2
+      - cacher_all-greens_2:
+          requires:
+            - linter_all-greens
+      - all-greens:
+          requires:
+            - cacher_all-greens_2
+      - orchestrate_atlas-rc:
+          requires:
+            - cacher_all-greens_2
+      - package_atlas-rc_2:
+          requires:
+            - orchestrate_atlas-rc
+      - atlas-rc:
+          requires:
+            - package_atlas-rc_2
+      - ctx_update-db-bug:
+          requires:
+            - package_atlas-rc_2
+      - gamma_update-db-bug_2:
+          requires:
+            - ctx_update-db-bug
+      - update-db-bug:
+          requires:
+            - gamma_update-db-bug_2
+      - stage_v2-rc2:
+          requires:
+            - gamma_update-db-bug_2
+      - cache_v2-rc2_2:
+          requires:
+            - stage_v2-rc2
+      - v2-rc2:
+          requires:
+            - cache_v2-rc2_2
+      - ensure_CORE-191:
+          requires:
+            - cache_v2-rc2_2
+      - g2_CORE-191_2:
+          requires:
+            - ensure_CORE-191
+      - CORE-191:
+          requires:
+            - g2_CORE-191_2
+      - package_vega:
+          requires:
+            - g2_CORE-191_2
+      - green_vega_2:
+          requires:
+            - package_vega
+      - vega:
+          requires:
+            - green_vega_2
+      - builder_wip-queue:
+          requires:
+            - green_vega_2
+      - audit_wip-queue_2:
+          requires:
+            - builder_wip-queue
+      - wip-queue:
+          requires:
+            - audit_wip-queue_2
+      - bundle_q2-canary:
+          requires:
+            - audit_wip-queue_2
+      - round1_q2-canary_2:
+          requires:
+            - bundle_q2-canary
+      - q2-canary:
+          requires:
+            - round1_q2-canary_2
+      - stepB_quebec:
+          requires:
+            - round1_q2-canary_2
+      - fixture_quebec_2:
+          requires:
+            - stepB_quebec
+      - quebec:
+          requires:
+            - fixture_quebec_2
+      - postcheck_verify-staging-artifact-bundle:
+          requires:
+            - fixture_quebec_2
+      - prebuild_verify-staging-artifact-bundle_2:
+          requires:
+            - postcheck_verify-staging-artifact-bundle
+      - verify-staging-artifact-bundle:
+          requires:
+            - prebuild_verify-staging-artifact-bundle_2
+      - sys_yolo:
+          requires:
+            - prebuild_verify-staging-artifact-bundle_2
+      - checker_yolo_2:
+          requires:
+            - sys_yolo
+      - yolo:
+          requires:
+            - checker_yolo_2
